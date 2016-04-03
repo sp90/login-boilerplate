@@ -1,6 +1,7 @@
 // Setup config
 
 // NOTE - Change filename to _global-config.js for use
+
 var config;
 var env = process.env.ENV_NAME || 'dev';
 
