@@ -73,18 +73,29 @@ function User(app, db) {
 		}, {
 			$set: Body
 		}, function(err, result) {
-			if (err) {
-				return res.json(gHelpers.errRes('Invalid email'));
+			// Error handling if it throws
+			if (!_.isNull(err)) {
+				console.log("err: ", err);
+				return;
 			}
 
-			Users.findOne({email: theUser.email}, function(err, item) {
-				if (err) {
-					return res.json(gHelpers.errRes('Invalid email'));
-				}
+			Users.findOne({
+				email: req.user.email
+			}, function(err, item) {
+				var user;
 
+				// If admin
+				if (item.isAdmin === true) {
+					// Then return the whole user object
+					user = item;
+				} else {
+					// else Filter user
+					user = _.pick(item, ['email', 'name', 'phone']);
+				}
+				// Return updated user object
 				res.json({
 					success: true,
-					user: _.pick(item, ['email', 'name', 'phone'])
+					user: user
 				});
 			});
 		});
@@ -93,9 +104,10 @@ function User(app, db) {
 	function changePassword(req, res) {
 		var Body = _.pick(req.body, ['password', 'newpassword']);
 
-		// TESTME
-		Users.findOne({'email': req.user.email}, function(err, item) {
-			if (err) {
+		Users.findOne({
+			'email': req.user.email
+		}, function(err, item) {
+			if (!_.isNull(err)) {
 				return res.json(gHelpers.errRes('An error happend'));
 			}
 
@@ -120,7 +132,7 @@ function User(app, db) {
 							}, {
 								$set: newPassword
 							}, function(err, result) {
-								if (err) {
+								if (!_.isNull(err)) {
 									return res.json(gHelpers.errRes('Invalid email'));
 								}
 
@@ -184,8 +196,10 @@ function User(app, db) {
 			return res.json(gHelpers.errRes('Invalid email'));
 		}
 
-		Users.findOne({'email': Body.email}, function(err, item) {
-			if (err) {
+		Users.findOne({
+			'email': Body.email
+		}, function(err, item) {
+			if (!_.isNull(err)) {
 				return res.json(gHelpers.errRes('An error happend'));
 			}
 
@@ -195,6 +209,10 @@ function User(app, db) {
 
 			helpers.verifyPassword(item.passwordData, Body.password)
 				.then(function(isValid) {
+					if (!isValid) {
+						return res.json(gHelpers.errRes('Invalid password'));
+					}
+
 					var date = new Date();
 					var token = jwt.sign({email: Body.email, created_at: date}, gConfig.tokenSecret, {
 						expiresIn: '30d'
@@ -204,9 +222,7 @@ function User(app, db) {
 						'success': true,
 						'token': token
 					});
-				}, function(err) {
-					return res.json(gHelpers.errRes('Incorrect password'));
-				})
+				});
 		});
 	}
 
@@ -243,7 +259,7 @@ function User(app, db) {
 
 				// Insert
 				Users.insert(newUser, function(err, result) {
-					if (err) {
+					if (!_.isNull(err)) {
 						if (err.code === 11000) {
 							return res.json(gHelpers.errRes('Email already exists'));
 						}
