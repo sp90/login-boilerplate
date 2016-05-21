@@ -9,6 +9,7 @@ var gConfig = require('../_global-config');
 // Helpers
 var gHelpers = require('../_global-helpers');
 var helpers = require('./helpers');
+var emailHelpers = require('./emailHelpers');
 
 // Loggedin middleware
 var isLoggedin = require('../isLoggedin');
@@ -154,38 +155,30 @@ function User(app, db) {
 	function requestResetPassword(req, res) {
 		var Body = _.pick(req.body, ['email']);
 
-		// TODO Send email with a 1H expiring token as url with random chars
-		// and then make endpoint to change the password verify with url token req.params
-		// As mail smtp server use Mailgun free account
-
-		// NOTE Use sendgrid for transactional
-		// NOTE https://github.com/sendgrid/sendgrid-nodejs#templates
-
-		/*
-			// Verify email, with regex to save db request on bots
-			if (!helpers.verifyEmail(Body.email)) {
-				return res.json(gHelpers.errRes('Invalid email'));
+		
+		Users.findOne({
+			'email': Body.email
+		}, function(err, item) {
+			if (!_.isNull(err)) {
+				return res.json(gHelpers.errRes('An error happend'));
 			}
 
-			var sendgrid  = require('sendgrid')(gConfig.sendgrid.apikey);
-			var email     = new sendgrid.Email({
-				to:       Body.email,
-				from:     gConfig.sendgrid.from,
-				subject:  gConfig.sendgrid.forgotPass.subject,
-				"sub": {
-					"%link%": [
-						"GENERATED_PASSWORD"
-					]
-				},
+			if (item == null) {
+				return res.json(gHelpers.errRes('No users with that email'));
+			}
+
+			emailHelpers.resetPassword({
+				'email': Body.email,
+				'url': 'https://github.com/sp90'
+			}).then(function(result){
+				res.json({
+					'success': true,
+					'message': 'A new password has been sent to your email'
+				});
+			}, function(err) {
+				return res.json(gHelpers.errRes('An error happend', err));
 			});
-
-			// add filter settings one at a time
-			email.addFilter('templates', 'enable', 1);
-			email.addFilter('templates', 'template_id', gConfig.sendgrid.forgotPass.templateId);
-
-			// Send mail
-			sendgrid.send(email, function(err, json) { });
-		*/
+		});
 	}
 
 	function loginUser(req, res) {
