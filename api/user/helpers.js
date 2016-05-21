@@ -13,7 +13,10 @@ function verifyEmail(email) {
 }
 
 function verifyType(type) {
-	return type === 'user' || type === 'owner';
+	// Define user types
+	var userTypes = ['user', 'owner'];
+
+	return userTypes.indexOf(type) > -1;
 }
 
 function hashPassword(password) {
