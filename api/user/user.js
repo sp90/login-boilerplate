@@ -32,7 +32,9 @@ function User(app, db) {
 	app.post(baseEP + '/user/changePassword', isLoggedin, changePassword);
 	app.post(baseEP + '/user/resetPassword', requestResetPassword);
 
-	// TODO - add newsletter signup
+	// 1. TODO - add email activation (started)
+	// 2. TODO - reset password
+	// 3. TODO - add google authenticator
 
 	// Endpoint functions
 	function getUser(req, res) {
