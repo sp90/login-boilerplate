@@ -35,8 +35,16 @@ function User(app, db) {
 
 	// Endpoint functions
 	function getUser(req, res) {
-		// Filter user
-		var user = _.pick(req.user, ['email', 'name', 'phone']);
+		var user;
+
+		// If admin
+		if (req.user.isAdmin === true) {
+			// Then return the whole user object
+			user = req.user;
+		} else {
+			// else Filter user
+			user = _.pick(req.user, ['email', 'name', 'phone']);
+		}
 
 		res.json({
 			'success': true,
@@ -45,9 +53,21 @@ function User(app, db) {
 	}
 
 	function updateUser(req, res) {
-		var Body = _.pick(req.body, ['name', 'phone']);
+		var Body;
 
-		// TESTME
+		// If admin
+		if (req.user.isAdmin === true) {
+			// idiot proff admin update (remove sensetive data)
+			delete req.body["passwordData"];
+			delete req.body["_id"];
+
+			// Then return the rest
+			Body = req.body;
+		} else {
+			// else Filter user
+			Body = _.pick(req.body, ['name', 'phone']);
+		}
+
 		Users.updateOne({
 			email: req.user.email
 		}, {
@@ -199,9 +219,15 @@ function User(app, db) {
 			return res.json(gHelpers.errRes('Invalid email'));
 		}
 
-		// Verify type
-		if (!helpers.verifyType(Body.type)) {
-			return res.json(gHelpers.errRes('Invalid type'));
+		// If type is set
+		if (!_.isUndefined(Body.type)) {
+			// Verify type
+			if (!helpers.verifyType(Body.type)) {
+				return res.json(gHelpers.errRes('Invalid type'));
+			}
+		} else {
+			// Set default type
+			Body.type = 'user';
 		}
 
 		// Hash password
@@ -210,7 +236,9 @@ function User(app, db) {
 				var newUser = {
 					email: Body.email,
 					passwordData: hashObj,
-					role: Body.type
+					role: Body.type,
+					activated: false,
+					isAdmin: false
 				};
 
 				// Insert
