@@ -17,11 +17,16 @@
     "body-parser": "^1.15.0",
     "cookie-parser": "^1.4.1",
     "credential": "^1.0.0",
+    "email-templates": "^2.3.0",
     "express": "^4.13.4",
+    "handlebars": "^4.0.5",
     "jsonwebtoken": "^6.2.0",
     "lodash": "^4.7.0",
     "mongodb": "^2.1.14",
     "morgan": "^1.7.0",
-    "multer": "^1.1.0"
+    "multer": "^1.1.0",
+    "nodemailer": "^2.4.1",
+    "nodemailer-mailgun-transport": "^1.0.2",
+    "passport": "^0.3.2"
   }
 }
