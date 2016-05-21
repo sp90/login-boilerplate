@@ -29,8 +29,8 @@ function User(app, db) {
 
 	// Routes - PUT
 	app.post(baseEP + '/user/update', isLoggedin, updateUser);
-	app.post(baseEP + '/user/changePassword', isLoggedin, changePassword);
-	app.post(baseEP + '/user/resetPassword', requestResetPassword);
+	app.post(baseEP + '/user/changepassword', isLoggedin, changePassword);
+	app.post(baseEP + '/user/resetpassword', requestResetPassword);
 
 	// 1. TODO - add email activation (started)
 	// 2. TODO - reset password
