@@ -1,6 +1,7 @@
 // Include libs
 var jwt = require('jsonwebtoken');
 var MongoClient = require('mongodb').MongoClient;
+var _ = require('lodash');
 
 // Configs
 var gConfig = require('./_global-config');
@@ -10,6 +11,13 @@ function isLoggedin(req, res, next) {
 
 	// Verify token
 	jwt.verify(token, gConfig.tokenSecret, function(err, decoded) {
+
+		if (!_.isNull(err)) {
+			return res.json({
+				'success': false,
+				'message': err.message
+			});
+		}
 
 		// Get user object
 		MongoClient.connect(gConfig.mongoHost, function(err, db) {
@@ -36,7 +44,7 @@ function isLoggedin(req, res, next) {
 
 				// Move foward
 				next();
-			})
+			});
 		});
 	});
 }
