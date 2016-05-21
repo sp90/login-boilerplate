@@ -1,6 +1,6 @@
 // Include libs
-var jwt = require('jsonwebtoken');
 var _ = require('lodash');
+var jwt = require('jsonwebtoken');
 
 // Configs
 var gConfig = require('../_global-config');
@@ -16,7 +16,7 @@ var isLoggedin = require('../isLoggedin');
 // Setup User
 function User(app, db) {
 	// Create base helpers
-	var baseEP = gConfig.version + '/api';
+	var baseEP =  '/api' + gConfig.version;
 	var Users = db.collection('users');
 
 	// Routes - GET
@@ -228,6 +228,8 @@ function User(app, db) {
 						message: 'Successfully created a new user',
 						user: result.ops[0].email
 					});
+
+					// Send email
 				});
 			}, function(err) {
 				res.json(gHelpers.errRes('Failed hashing the password'));
