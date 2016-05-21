@@ -127,6 +127,33 @@ function User(app, db) {
 		// As mail smtp server use Mailgun free account
 
 		// NOTE Use sendgrid for transactional
+		// NOTE https://github.com/sendgrid/sendgrid-nodejs#templates
+
+		/*
+			// Verify email, with regex to save db request on bots
+			if (!helpers.verifyEmail(Body.email)) {
+				return res.json(gHelpers.errRes('Invalid email'));
+			}
+
+			var sendgrid  = require('sendgrid')(gConfig.sendgrid.apikey);
+			var email     = new sendgrid.Email({
+				to:       Body.email,
+				from:     gConfig.sendgrid.from,
+				subject:  gConfig.sendgrid.forgotPass.subject,
+				"sub": {
+					"%link%": [
+						"GENERATED_PASSWORD"
+					]
+				},
+			});
+
+			// add filter settings one at a time
+			email.addFilter('templates', 'enable', 1);
+			email.addFilter('templates', 'template_id', gConfig.sendgrid.forgotPass.templateId);
+
+			// Send mail
+			sendgrid.send(email, function(err, json) { });
+		*/
 	}
 
 	function loginUser(req, res) {
