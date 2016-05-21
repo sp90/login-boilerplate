@@ -14,10 +14,9 @@ var helpers = require('./helpers');
 var isLoggedin = require('../isLoggedin');
 
 // Setup User
-function User(app, services) {
+function User(app, db) {
 	// Create base helpers
 	var baseEP = gConfig.version + '/api';
-	var db = services.db;
 	var Users = db.collection('users');
 
 	// Routes - GET

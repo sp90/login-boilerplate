@@ -13,10 +13,6 @@ if (env === 'staging' || env === 'production') {
 		tokenSecret: 'SERIOUStokenSECRET',
 		mailTokenSecret: 'SERIOUSmailTokenSECRET',
 		mongoHost: 'mongodb://mongo:27017/test1',
-		redis: {
-			host: 'redis',
-			port: 6379
-		},
 		sendgrid: {
 			apikey: 'somekey'
 		}
@@ -29,10 +25,6 @@ if (env === 'staging' || env === 'production') {
 		tokenSecret: 'localTokenSecret',
 		mailTokenSecret: 'localMailTokenSecret',
 		mongoHost: 'mongodb://localhost:27017/test1',
-		redis: {
-			host: 'localhost',
-			port: 6379
-		},
 		sendgrid: {
 			apikey: 'somekey'
 		}

@@ -48,19 +48,18 @@ app.use(bodyParser.json());
  *	Start up the engine
  */ 
 
-var redis = require("redis");
-var kvs = redis.createClient(config.redis);
-
 MongoClient.connect(config.mongoHost, function(err, db) {
     'use strict';
     if(err) throw err;
 
-	var services = {
-		db: db,
-		kvs: kvs
-	};
+    app.all('/*', function(req, res, next) {
+      res.header('Access-Control-Allow-Origin', '*');
+      res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+      
+      next();
+    });
 
-    require('./user/user')(app, services);
+    require('./user/user')(app, db);
 
     // Start listening
     app.listen(config.port);
