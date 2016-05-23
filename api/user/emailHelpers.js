@@ -23,7 +23,7 @@ var emailHelpers = {
 };
 
 // Add handlebar helpers
-Handlebars.registerHelper('capitalize', function capitalize (context) {
+Handlebars.registerHelper('capitalize', function capitalize(context) {
 	// Ex:
 	// {{ capitalize firstname }}
 
