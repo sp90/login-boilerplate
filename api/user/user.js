@@ -169,17 +169,15 @@ function User(app, db) {
 				return res.json(gHelpers.errRes('No users with that email'));
 			}
 
-			emailHelpers.resetPassword({
-				'email': Body.email,
-				'url': 'https://github.com/sp90'
-			}).then(function(result){
-				res.json({
-					'success': true,
-					'message': 'A new password has been sent to your email'
+			emailHelpers.resetPassword(Body.email)
+				.then(function(result){
+					res.json({
+						'success': true,
+						'message': 'A new password has been sent to your email'
+					});
+				}, function(err) {
+					return res.json(gHelpers.errRes('An error happend', err));
 				});
-			}, function(err) {
-				return res.json(gHelpers.errRes('An error happend', err));
-			});
 		});
 	}
 
