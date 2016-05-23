@@ -20,7 +20,7 @@ if (env === 'staging' || env === 'production') {
 		mailTokenSecret: 'SERIOUSmailTokenSECRET',
 		mongoHost: 'mongodb://mongo:27017/test1',
 		mailSettings: {
-			mailgun_auth: {
+			mailgunAuth: {
 				api_key: 'somekey',
 				domain: 'somedomain'
 			},
@@ -64,7 +64,7 @@ if (env === 'staging' || env === 'production') {
 		mailTokenSecret: 'localMailTokenSecret',
 		mongoHost: 'mongodb://localhost:27017/test1',
 		mailSettings: {
-			mailgun_auth: {
+			mailgunAuth: {
 				api_key: 'somekey',
 				domain: 'somedomain'
 			},
