@@ -3,14 +3,18 @@ var Promise = require("bluebird");
 var EmailTemplate = require('email-templates').EmailTemplate;
 var Handlebars = require('handlebars');
 var path = require('path');
+var jwt = require('jsonwebtoken');
 
 var gConfig = require('../_global-config');
 
 var nodemailer = require('nodemailer');
+var htmlToText = require('nodemailer-html-to-text').htmlToText;
 var mg = require('nodemailer-mailgun-transport');
-var nodemailerMailgun = nodemailer.createTransport(mg({
-	auth: gConfig.mailgun.auth
+var transporter = nodemailer.createTransport(mg({
+	auth: gConfig.mailSettings.mailgunAuth
 }));
+
+transporter.use('compile', htmlToText());
 
 // Bind functions to the module
 var emailHelpers = {
