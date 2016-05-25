@@ -34,7 +34,7 @@ It's fits very well with my other project <a href="https://github.com/sp90/proto
 * Add postman collection to the repo
 * Write tests
 * Add code linting
-* Clean up user and make the tools more modular
+* Move each user into a module so each module does 1 thing
 
 ### Contributions
 
