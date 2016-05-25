@@ -12,7 +12,7 @@ var multer = require('multer');
 var morgan = require('morgan');
 
 // Prep Storage
-var MongoClient = require('mongodb').MongoClient;
+var db = require('./db');
 
 // Prep variables
 var config = require('./_global-config');
@@ -43,25 +43,30 @@ app.use(bodyParser.json());
 // 	dest:'../uploads/'
 // }));
 
+// Get routes
+app.all('/*', function(req, res, next) {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  
+  next();
+});
+
 
 /**
  *	Start up the engine
  */ 
 
-MongoClient.connect(config.mongoHost, function(err, db) {
+db.connect(config.mongoHost, function(err) {
     'use strict';
-    if(err) throw err;
+    if (err) {
+      console.log('Unable to connect to Mongo.')
+      process.exit(1)
+    } else {
 
-    app.all('/*', function(req, res, next) {
-      res.header('Access-Control-Allow-Origin', '*');
-      res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
-      
-      next();
-    });
+      require('./user/user')(app);
 
-    require('./user/user')(app, db);
-
-    // Start listening
-    app.listen(config.port);
-    console.log('Express server listening on port: %d', config.port);
+      // Start listening
+      app.listen(config.port);
+      console.log('Express server listening on port: %d', config.port);
+    }
 });
