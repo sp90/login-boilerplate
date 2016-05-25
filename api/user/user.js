@@ -14,31 +14,31 @@ var emailHelpers = require('./emailHelpers');
 // Loggedin middleware
 var isLoggedin = require('../isLoggedin');
 
+// Get db
+var db = require('../db');
+
 // Setup User
-function User(app, db) {
+function User(app) {
 	// Create base helpers
 	var baseEP =  '/api' + gConfig.version;
-	var Users = db.collection('users');
+	var Users = db.get().collection('users');
 
 	// Routes - GET
 	app.get(baseEP + '/profile', isLoggedin, getUser);
 
 	// Routes - POST
-	app.post(baseEP + '/user/create', verifyEmail, verifyType, hashPassword, createUser);
-	app.post(baseEP + '/user/login', verifyEmail, getUserByEmail, verifyPassword, loginUser);
+	app.post(baseEP + '/user/create', helpers.verifyEmail, helpers.verifyType, helpers.hashPassword, createUser);
+	app.post(baseEP + '/user/login', helpers.verifyEmail, getUserByEmail, helpers.verifyPassword, loginUser);
 
 	// Routes - PUT
-	app.post(baseEP + '/user/update', isLoggedin, updateUser);
-	app.post(baseEP + '/user/changepassword', isLoggedin, getUserByEmail, verifyPassword, hashPassword, changePassword);
+	app.post(baseEP + '/user/update', isLoggedin, updateUser, returnUser);
+	app.post(baseEP + '/user/changepassword', isLoggedin, getUserByEmail, helpers.verifyPassword, helpers.hashPassword, changePassword);
 	app.post(baseEP + '/user/request-reset-password', getUserByEmail, requestResetPassword);
 
-	app.post(baseEP + '/user/resetpassword', verifyMailToken, hashPassword, resetPassword);
-	app.post(baseEP + '/user/activate', verifyMailToken, activateUser);
-
-	// 1. TODO - add google authenticator
+	app.post(baseEP + '/user/resetpassword', helpers.verifyMailToken, helpers.hashPassword, resetPassword);
+	app.post(baseEP + '/user/activate', helpers.verifyMailToken, activateUser);
 
 	// Endpoint functions
-	//require('./getUser')
 	function getUser(req, res) {
 		var user;
 
@@ -57,7 +57,7 @@ function User(app, db) {
 		});
 	}
 
-	function updateUser(req, res) {
+	function updateUser(req, res, next) {
 		var Body;
 
 		// If admin
@@ -80,29 +80,10 @@ function User(app, db) {
 		}, function(err, result) {
 			// Error handling if it throws
 			if (!_.isNull(err)) {
-				console.log("err: ", err);
-				return;
+				return res.json(gHelpers.errRes('Couldn\'t update the user'));
 			}
 
-			Users.findOne({
-				email: req.user.email
-			}, function(err, item) {
-				var user;
-
-				// If admin
-				if (item.isAdmin === true) {
-					// Then return the whole user object
-					user = item;
-				} else {
-					// else Filter user
-					user = _.pick(item, ['email', 'name', 'phone']);
-				}
-				// Return updated user object
-				res.json({
-					success: true,
-					user: user
-				});
-			});
+			next();
 		});
 	}
 
@@ -131,7 +112,7 @@ function User(app, db) {
 			$set: req.new_password
 		}, function(err, result) {
 			if (!_.isNull(err)) {
-				return res.json(gHelpers.errRes('Invalid email - update'));
+				return res.json(gHelpers.errRes('Invalid email - reset password'));
 			}
 
 			// TODO send email/sms to notify that the password has been changed
@@ -153,10 +134,9 @@ function User(app, db) {
 			$set: activateObj
 		}, function(err, result) {
 			if (!_.isNull(err)) {
-				return res.json(gHelpers.errRes('Invalid email - update'));
+				return res.json(gHelpers.errRes('Invalid email - activation'));
 			}
 
-			// TODO send email/sms to notify that the password has been changed
 			res.json({
 				'success': true,
 				'message': 'Your password is now updated'
@@ -174,7 +154,7 @@ function User(app, db) {
 					'message': 'A new password has been sent to your email'
 				});
 			}, function(err) {
-				return res.json(gHelpers.errRes('An error happend', err));
+				return res.json(gHelpers.errRes('An error happend while sending the email to reset the password', err));
 			});
 	}
 
@@ -215,50 +195,17 @@ function User(app, db) {
 			}
 
 			// TODO - Send activation email
-			res.json({
-				success: true,
-				message: 'Successfully created a new user',
-				user: result.ops[0].email
-			});
+			emailHelpers.activateUser(result.ops[0].email)
+				.then(function(message){
+					res.json({
+						success: true,
+						message: 'Successfully created a new user',
+						user: result.ops[0].email
+					});
+				}, function(err) {
+					return res.json(gHelpers.errRes('An error happend while trying to send the activation email', err));
+				});
 		});
-	}
-
-	/**
-	 *	HELPERS
-	 *	TODO - move them into the helper functions already build
-	 */
-
-	function hashPassword(req, res, next) {
-		var Body = _.pick(req.body, ['newpassword']);
-
-		if (_.isUndefined(Body.newpassword)) {
-			return res.json(gHelpers.errRes('Add a new password to the request'));
-		}
-
-		helpers.hashPassword(Body.newpassword)
-			.then(function(hashObj) {
-				var newPassword = {
-					passwordData: hashObj
-				};
-
-				req.new_password = newPassword;
-
-				next();
-			});
-	}
-
-	function verifyPassword(req, res, next) {
-		var Body = _.pick(req.body, ['password']);
-		var user = req.user_by_email;
-
-		helpers.verifyPassword(user.passwordData, Body.password)
-			.then(function(isValid) {
-				if (!isValid) {
-					return res.json(gHelpers.errRes('Invalid password'));
-				}
-
-				next();
-			});
 	}
 
 	function getUserByEmail(req, res, next) {
@@ -288,43 +235,18 @@ function User(app, db) {
 		});
 	}
 
-	function verifyEmail(req, res, next) {
-		var Body = _.pick(req.body, ['email']);
+	function returnUser(req, res) {
+		Users.findOne({
+			email: req.user.email
+		}, function(err, item) {
 
-		if (!helpers.verifyEmail(Body.email)) {
-			return res.json(gHelpers.errRes('Invalid email - verify'));
-		}
+			req.user = item.isAdmin === true ? item : _.pick(item, ['email', 'name', 'phone']);
 
-		next();
-	}
-
-	function verifyType(req, res, next) {
-		// If type is set
-		if (!_.isUndefined(Body.type)) {
-			// Verify type
-			if (!helpers.verifyType(Body.type)) {
-				return res.json(gHelpers.errRes('Invalid type - verify'));
-			}
-		}
-
-		next();
-	}
-
-	function verifyMailToken(req, res, next) {
-		var token = req.get('mail-token');
-
-		jwt.verify(token, gConfig.tokenSecret, function(err, decoded) {
-			if (!_.isNull(err)) {
-				return res.json(gHelpers.errRes(err.message));
-			}
-
-			if (_.isUndefined(decoded.mail_token) || decoded.mail_token === false) {
-				return res.json(gHelpers.errRes('You have provided an invalid token'));
-			}
-
-			req.jwt_decoded = decoded;
-
-			next();
+			// Return updated user object
+			res.json({
+				success: true,
+				user: req.user
+			});
 		});
 	}
 }
