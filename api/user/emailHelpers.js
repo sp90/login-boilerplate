@@ -41,7 +41,7 @@ function resetPassword(email) {
 				content: 'Please follow the link below to update your password'
 			}
 		],
-		resetLink: gConfig.mailSettings.resetPassword.callbackUrl + token
+		resetLink: gConfig.mailSettings.resetPass.callbackUrl + token
 	};
 
 	return new Promise(function(resolve, reject) {
@@ -126,6 +126,7 @@ function sendMail(mail) {
 function generateToken(identifier, email) {
 	return jwt.sign({
 		email: email, 
+		mail_token: true,
 		identifier: identifier, 
 		created_at: new Date()
 	}, gConfig.mailTokenSecret, {
