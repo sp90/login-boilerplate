@@ -24,17 +24,21 @@ function User(app, db) {
 	app.get(baseEP + '/profile', isLoggedin, getUser);
 
 	// Routes - POST
-	app.post(baseEP + '/user/create', createUser);
-	app.post(baseEP + '/user/login', loginUser);
+	app.post(baseEP + '/user/create', verifyEmail, verifyType, hashPassword, createUser);
+	app.post(baseEP + '/user/login', verifyEmail, getUserByEmail, verifyPassword, loginUser);
 
 	// Routes - PUT
 	app.post(baseEP + '/user/update', isLoggedin, updateUser);
-	app.post(baseEP + '/user/changepassword', isLoggedin, changePassword);
-	app.post(baseEP + '/user/resetpassword', requestResetPassword);
+	app.post(baseEP + '/user/changepassword', isLoggedin, getUserByEmail, verifyPassword, hashPassword, changePassword);
+	app.post(baseEP + '/user/request-reset-password', getUserByEmail, requestResetPassword);
+
+	app.post(baseEP + '/user/resetpassword', verifyMailToken, hashPassword, resetPassword);
+	app.post(baseEP + '/user/activate', verifyMailToken, activateUser);
 
 	// 1. TODO - add google authenticator
 
 	// Endpoint functions
+	//require('./getUser')
 	function getUser(req, res) {
 		var user;
 
@@ -50,7 +54,7 @@ function User(app, db) {
 		res.json({
 			'success': true,
 			'user': user
-		})
+		});
 	}
 
 	function updateUser(req, res) {
@@ -103,117 +107,88 @@ function User(app, db) {
 	}
 
 	function changePassword(req, res) {
-		var Body = _.pick(req.body, ['password', 'newpassword']);
-
-		Users.findOne({
-			'email': req.user.email
-		}, function(err, item) {
+		Users.updateOne({
+			email: req.user_by_email.email
+		}, {
+			$set: req.new_password
+		}, function(err, result) {
 			if (!_.isNull(err)) {
-				return res.json(gHelpers.errRes('An error happend'));
+				return res.json(gHelpers.errRes('Invalid email - update'));
 			}
 
-			if (item == null) {
-				return res.json(gHelpers.errRes('No users with that email'));
+			// TODO send email/sms to notify that the password has been changed
+			res.json({
+				'success': true,
+				'message': 'Your password is now updated'
+			});
+		});
+	}
+
+	function resetPassword(req, res) {
+		Users.updateOne({
+			email: req.jwt_decoded.email
+		}, {
+			$set: req.new_password
+		}, function(err, result) {
+			if (!_.isNull(err)) {
+				return res.json(gHelpers.errRes('Invalid email - update'));
 			}
 
-			helpers.verifyPassword(item.passwordData, Body.password)
-				.then(function(isValid) {
-					if (!isValid) {
-						return res.json(gHelpers.errRes('Invalid password'));
-					}
+			// TODO send email/sms to notify that the password has been changed
+			res.json({
+				'success': true,
+				'message': 'Your password is now updated'
+			});
+		});
+	}
 
-					helpers.hashPassword(Body.newpassword)
-						.then(function(hashObj) {
-							var newPassword = {
-								passwordData: hashObj
-							};
+	function activateUser(req, res) {
+		var activateObj = {
+			activated: true
+		};
 
-							Users.updateOne({
-								email: req.user.email
-							}, {
-								$set: newPassword
-							}, function(err, result) {
-								if (!_.isNull(err)) {
-									return res.json(gHelpers.errRes('Invalid email'));
-								}
+		Users.updateOne({
+			email: req.jwt_decoded.email
+		}, {
+			$set: activateObj
+		}, function(err, result) {
+			if (!_.isNull(err)) {
+				return res.json(gHelpers.errRes('Invalid email - update'));
+			}
 
-								// TODO send email/sms to notify that the password has been changed
-								res.json({
-									'success': true,
-									'message': 'Your password is now updated'
-								});
-							});
-
-						});
-
-				}, function(err) {
-					return res.json(gHelpers.errRes('Incorrect password'));
-				})
+			// TODO send email/sms to notify that the password has been changed
+			res.json({
+				'success': true,
+				'message': 'Your password is now updated'
+			});
 		});
 	}
 
 	function requestResetPassword(req, res) {
-		var Body = _.pick(req.body, ['email']);
+		var email = req.user_by_email.email;
 
-		
-		Users.findOne({
-			'email': Body.email
-		}, function(err, item) {
-			if (!_.isNull(err)) {
-				return res.json(gHelpers.errRes('An error happend'));
-			}
-
-			if (item == null) {
-				return res.json(gHelpers.errRes('No users with that email'));
-			}
-
-			emailHelpers.resetPassword(Body.email)
-				.then(function(result){
-					res.json({
-						'success': true,
-						'message': 'A new password has been sent to your email'
-					});
-				}, function(err) {
-					return res.json(gHelpers.errRes('An error happend', err));
+		emailHelpers.resetPassword(email)
+			.then(function(result){
+				res.json({
+					'success': true,
+					'message': 'A new password has been sent to your email'
 				});
-		});
+			}, function(err) {
+				return res.json(gHelpers.errRes('An error happend', err));
+			});
 	}
 
 	function loginUser(req, res) {
-		var Body = _.pick(req.body, ['email', 'password']);
+		var Body = _.pick(req.body, ['email']);
 
-		// Verify email, with regex to save db request on bots
-		if (!helpers.verifyEmail(Body.email)) {
-			return res.json(gHelpers.errRes('Invalid email'));
-		}
+		var date = new Date();
+		var token = jwt.sign({email: Body.email, created_at: date}, gConfig.tokenSecret, {
+			expiresIn: '30d'
+		});
 
-		Users.findOne({
-			'email': Body.email
-		}, function(err, item) {
-			if (!_.isNull(err)) {
-				return res.json(gHelpers.errRes('An error happend'));
-			}
-
-			if (item == null) {
-				return res.json(gHelpers.errRes('No users with that email'));
-			}
-
-			helpers.verifyPassword(item.passwordData, Body.password)
-				.then(function(isValid) {
-					if (!isValid) {
-						return res.json(gHelpers.errRes('Invalid password'));
-					}
-
-					var date = new Date();
-					var token = jwt.sign({email: Body.email, created_at: date}, gConfig.tokenSecret, {
-						expiresIn: '30d'
-					});
-
-					res.json({
-						'success': true,
-						'token': token
-					});
-				});
+		res.json({
+			'success': true,
+			'token': token
 		});
 	}
 
@@ -221,54 +196,136 @@ function User(app, db) {
 		// Supported fields
 		var Body = _.pick(req.body, ['email', 'password', 'type']);
 
-		// Verify email
-		if (!helpers.verifyEmail(Body.email)) {
-			return res.json(gHelpers.errRes('Invalid email'));
+		var newUser = {
+			email: Body.email,
+			passwordData: req.new_password.passwordData,
+			role: Body.type || 'user',
+			activated: false,
+			isAdmin: false
+		};
+
+		// Insert
+		Users.insert(newUser, function(err, result) {
+			if (!_.isNull(err)) {
+				if (err.code === 11000) {
+					return res.json(gHelpers.errRes('Email already exists'));
+				}
+					
+				return res.json(gHelpers.errRes('For some crazy reason we couldn\'t save you in our user system, please try again'));
+			}
+
+			// TODO - Send activation email
+			res.json({
+				success: true,
+				message: 'Successfully created a new user',
+				user: result.ops[0].email
+			});
+		});
+	}
+
+	/**
+	 *	HELPERS
+	 *	TODO - move them into the helper functions already build
+	 */
+
+	function hashPassword(req, res, next) {
+		var Body = _.pick(req.body, ['newpassword']);
+
+		if (_.isUndefined(Body.newpassword)) {
+			return res.json(gHelpers.errRes('Add a new password to the request'));
 		}
 
+		helpers.hashPassword(Body.newpassword)
+			.then(function(hashObj) {
+				var newPassword = {
+					passwordData: hashObj
+				};
+
+				req.new_password = newPassword;
+
+				next();
+			});
+	}
+
+	function verifyPassword(req, res, next) {
+		var Body = _.pick(req.body, ['password']);
+		var user = req.user_by_email;
+
+		helpers.verifyPassword(user.passwordData, Body.password)
+			.then(function(isValid) {
+				if (!isValid) {
+					return res.json(gHelpers.errRes('Invalid password'));
+				}
+
+				next();
+			});
+	}
+
+	function getUserByEmail(req, res, next) {
+		var Body = _.pick(req.body, ['email']);
+		var email;
+
+		if (_.isUndefined(Body.email)) {
+			email = req.user.email;
+		} else {
+			email = Body.email
+		}
+
+		Users.findOne({
+			'email': email
+		}, function(err, user) {
+			if (!_.isNull(err)) {
+				return res.json(gHelpers.errRes('An error happend'));
+			}
+
+			if (user == null) {
+				return res.json(gHelpers.errRes('No users with that email'));
+			}
+
+			req.user_by_email = user;
+
+			next();
+		});
+	}
+
+	function verifyEmail(req, res, next) {
+		var Body = _.pick(req.body, ['email']);
+
+		if (!helpers.verifyEmail(Body.email)) {
+			return res.json(gHelpers.errRes('Invalid email - verify'));
+		}
+
+		next();
+	}
+
+	function verifyType(req, res, next) {
 		// If type is set
 		if (!_.isUndefined(Body.type)) {
 			// Verify type
 			if (!helpers.verifyType(Body.type)) {
-				return res.json(gHelpers.errRes('Invalid type'));
+				return res.json(gHelpers.errRes('Invalid type - verify'));
 			}
-		} else {
-			// Set default type
-			Body.type = 'user';
 		}
 
-		// Hash password
-		helpers.hashPassword(Body.password)
-			.then(function(hashObj) {
-				var newUser = {
-					email: Body.email,
-					passwordData: hashObj,
-					role: Body.type,
-					activated: false,
-					isAdmin: false
-				};
+		next();
+	}
 
-				// Insert
-				Users.insert(newUser, function(err, result) {
-					if (!_.isNull(err)) {
-						if (err.code === 11000) {
-							return res.json(gHelpers.errRes('Email already exists'));
-						}
-							
-						return res.json(gHelpers.errRes('For some crazy reason we couldn\'t save you in our user system, please try again'));
-					}
+	function verifyMailToken(req, res, next) {
+		var token = req.get('mail-token');
 
-					res.json({
-						success: true,
-						message: 'Successfully created a new user',
-						user: result.ops[0].email
-					});
+		jwt.verify(token, gConfig.tokenSecret, function(err, decoded) {
+			if (!_.isNull(err)) {
+				return res.json(gHelpers.errRes(err.message));
+			}
 
-					// Send email
-				});
-			}, function(err) {
-				res.json(gHelpers.errRes('Failed hashing the password'));
-			});
+			if (_.isUndefined(decoded.mail_token) || decoded.mail_token === false) {
+				return res.json(gHelpers.errRes('You have provided an invalid token'));
+			}
+
+			req.jwt_decoded = decoded;
+
+			next();
+		});
 	}
 }
 
