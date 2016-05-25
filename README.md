@@ -30,6 +30,11 @@ It's fits very well with my other project <a href="https://github.com/sp90/proto
 * New relic integration
 * Dockerfile
 * Frontend lib to easy utilize this user system
+* Error logging (Only to write out stats, so that you might Improve UX)
+* Add postman collection to the repo
+* Write tests
+* Add code linting
+* Clean up user and make the tools more modular
 
 ### Contributions
 
