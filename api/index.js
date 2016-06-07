@@ -10,12 +10,14 @@ var cookieParser = require('cookie-parser');
 var bodyParser = require('body-parser');
 var multer = require('multer');
 var morgan = require('morgan');
+var csrf = require('csurf');
 
 // Prep Storage
 var db = require('./db');
 
 // Prep variables
 var config = require('./_global-config');
+var gHelpers = require('./_global-helpers');
 
 
 /**
@@ -25,7 +27,7 @@ var config = require('./_global-config');
 // Error logging
 app.use(morgan('combined', {
     skip: function(req, res) { 
-    	return res.statusCode < 400 
+    	return res.statusCode < 400;
     }
 }));
 
@@ -37,6 +39,16 @@ app.use(bodyParser.urlencoded({ extended: false }));
 
 // parse application/json
 app.use(bodyParser.json());
+
+// add csrf token as a cookie and check for it on requests
+app.use(csrf({ cookie: true }));
+
+app.use(function (err, req, res, next) {
+  if (err.code !== 'EBADCSRFTOKEN') { return next(err); }
+
+  // handle CSRF token errors here
+  return res.status(403).json(gHelpers.errRes('Couldn\'t update the user'));
+});
 
 // For parsing multipart/form-data
 // app.use(multer({

@@ -15,6 +15,7 @@ It's fits very well with my other project <a href="https://github.com/sp90/proto
 * Picking data that we need from the req.body
 * Sample config file to configurate the lot
 * Centralised error handling (binding a db would be nice to see when error happens)
+* CSRF token support (using cookies, so no frontend dev needed)
 
 ### TODO's
 
